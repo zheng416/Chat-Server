@@ -110,10 +110,10 @@ final class ChatClient {
 				client.start();
 				client.sendMessage(new ChatMessage());
 			} else {
-				flag = true;
 				if (b.length == 1 & b[0].equals("logout")) {
 
 				}
+				flag = true;
 			}
 		}
 	}
