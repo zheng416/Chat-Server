@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 
@@ -31,13 +32,31 @@ final class ChatServer {
      */
     private void start() {
         try {
-            ServerSocket serverSocket = new ServerSocket(port);
-            while (true) {
-                Socket socket = serverSocket.accept();
-                Runnable r = new ClientThread(socket, uniqueId++);
-                Thread t = new Thread(r);
-                clients.add((ClientThread) r);
-                t.start();
+            try {
+                ServerSocket serverSocket = new ServerSocket(port);
+                System.out.println("Banned Words File: " + badWords);
+                System.out.println("Banned Words:");
+                String f = ChatServer.class.getResource("badWords.txt").getPath();
+                File bad = new File(f);
+                BufferedReader in = new BufferedReader(new FileReader(bad));
+                String read = in.readLine();
+                while (read != null) {
+                    System.out.println(read);
+                    read = in.readLine();
+                }
+                System.out.println();
+                SimpleDateFormat hh = new SimpleDateFormat("HH:mm:ss");
+                Date now = new Date();
+                System.out.println(hh.format(now) + ": Sever waiting for Clients on Port " + port + ".");
+                while (true) {
+                    Socket socket = serverSocket.accept();
+                    Runnable r = new ClientThread(socket, uniqueId++);
+                    Thread t = new Thread(r);
+                    clients.add((ClientThread) r);
+                    t.start();
+                }
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -105,40 +124,21 @@ final class ChatServer {
          */
         @Override
         public void run() {
-            // Read the username sent to you by client
+            //System.out.println(username + ": Ping");
+            SimpleDateFormat hh = new SimpleDateFormat("HH:mm:ss");
+            Date now = new Date();
+            System.out.println(hh.format(now) + " " + username + " just connected.");
+            System.out.println(hh.format(now) + ": Sever waiting for Clients on Port " + port + ".");
             try {
                 cm = (ChatMessage) sInput.readObject();
+                while (cm.getType() != 1) {
+                    broadcast(username + ": " + cm.getMessage());
+                    cm = (ChatMessage) sInput.readObject();
+                }
+                close();
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
-            //System.out.println(username + ": Ping");
-            System.out.println("Banned Words File: " + badWords);
-            System.out.println("Banned Words:");
-            File bad = new File(badWords);
-
-            try {
-                BufferedReader in = new BufferedReader(new FileReader(bad));
-                try {
-                    String read = in.readLine();
-                    while (read != null) {
-                        System.out.println(read);
-                        read = in.readLine();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-
-
-            // Send message back to the client
-            try {
-                sOutput.writeObject("Pong");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
         }
 
         private boolean writeMessage(String msg) {
@@ -146,7 +146,7 @@ final class ChatServer {
                 return false;
             } else {
                 try {
-                    sOutput.writeObject(cm);
+                    sOutput.writeObject(msg);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -156,9 +156,11 @@ final class ChatServer {
 
         private synchronized void broadcast(String msg) {
             for (int i = 0; i < clients.size(); i++) {
-                clients.get(i).writeMessage(clients.get(i).cm.getMessage());
+                //clients.get(i).writeMessage(clients.get(i).cm.getMessage());
                 SimpleDateFormat hh = new SimpleDateFormat("HH:mm:ss");
-                System.out.println(hh);
+                Date now = new Date();
+                clients.get(i).writeMessage(hh.format(now) + " " + msg);
+                System.out.println(hh.format(now) + " " + msg);
             }
         }
 
@@ -172,14 +174,6 @@ final class ChatServer {
 
     }
 
-    private synchronized void broadcast(String msg) {
-        for (int i = 0; i < clients.size(); i++) {
-            ChatFilter filter = new ChatFilter(badWords);
-            clients.get(i).writeMessage(filter.filter(clients.get(i).cm.getMessage()));
-            SimpleDateFormat hh = new SimpleDateFormat("HH:mm:ss");
-            System.out.println(hh);
-        }
-    }
 
     private synchronized void remove(int id) {
         clients.remove(id);
