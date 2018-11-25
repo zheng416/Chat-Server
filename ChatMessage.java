@@ -11,7 +11,19 @@ final class ChatMessage implements Serializable {
         this.type = type1;
         this.message = msg1;
     }
-    public ChatMessage() {
+    public ChatMessage(String m) {
+        this.message = m;
+        if (m.equals("/logout")) {
+            this.type = 1;
+        } else if (m.equals("/list")) {
+            this.type = 4;
+        } else if (m.length() >=3 ) {
+            if (m.substring(0,3).equals("/msg")) {
+                this.type = 1;
+            }
+        } else {
+            this.type = 0;
+        }
 
     }
     public String getMessage() {
