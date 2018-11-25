@@ -7,7 +7,8 @@ public class ChatFilter {
     }
 
     public String filter(String msg) {
-        File bad = new File(badWords);
+        String f = ChatServer.class.getResource("badWords.txt").getPath();
+        File bad = new File(f);
         try {
             BufferedReader in = new BufferedReader(new FileReader(bad));
             try {
@@ -17,7 +18,7 @@ public class ChatFilter {
                     for (int i = 0; i < read.length(); i++) {
                         re += "*";
                     }
-                    msg.replaceAll("(?i)"+read, re);
+                    msg = msg.replaceAll("(?i)"+read, re);
                     read = in.readLine();
                 }
 
