@@ -15,7 +15,7 @@ final class ChatServer {
     private final List<ClientThread> clients = new ArrayList<>();
     private final int port;
     private String badWords;
-
+    private ChatFilter fil;
 
     private ChatServer(int port) {
         this.port = port;
@@ -24,6 +24,7 @@ final class ChatServer {
     private ChatServer(int port, String bad) {
         this.port = port;
         this.badWords = bad;
+        fil = new ChatFilter(badWords);
     }
 
     /*
@@ -70,7 +71,7 @@ final class ChatServer {
      *  If the port number is not specified 1500 is used
      */
     public static void main(String[] args) {
-        boolean flag = true;
+        /*boolean flag = true;
         while (flag) {
             Scanner scan = new Scanner(System.in);
             String a = scan.nextLine();
@@ -90,7 +91,20 @@ final class ChatServer {
             } else {
                 flag = true;
             }
+            */
+        //if (args == null) {
+        // ChatServer  server = new ChatServer(1500);
+        //server.start();
+        // } else {
+        //*may be not a port number
+        if (args.length == 2) {
+            ChatServer server = new ChatServer(Integer.parseInt(args[0], 10), args[1]);
+            server.start();
+        } else {
+            ChatServer server = new ChatServer(1500, "badwords.txt");
+            server.start();
         }
+        // }
 
     }
 
@@ -124,18 +138,32 @@ final class ChatServer {
          */
         @Override
         public void run() {
+            Boolean flag = true;
             //System.out.println(username + ": Ping");
             SimpleDateFormat hh = new SimpleDateFormat("HH:mm:ss");
             Date now = new Date();
             System.out.println(hh.format(now) + " " + username + " just connected.");
             System.out.println(hh.format(now) + ": Sever waiting for Clients on Port " + port + ".");
             try {
-                cm = (ChatMessage) sInput.readObject();
-                while (cm.getType() != 1) {
-                    broadcast(username + ": " + cm.getMessage());
+                while (flag) {
                     cm = (ChatMessage) sInput.readObject();
+                    if (cm.getType() == 1) {
+                        close();
+                    } else if (cm.getType() == 0) {
+                        broadcast(username + ": " + cm.getMessage());
+                    } else if (cm.getType() == 2) {
+                        System.out.println(hh.format(now) + " " + username + " -> " + cm.getRecipient() + ": " + censored);
+                        writeMessage(sdf.format(date) + " " + username + " -> " + cm.getRecipient() + ": " + censored);
+                        directMessage(sdf.format(date) + " " + username + " -> " + cm.getRecipient() +
+                                              ": " + censored, cm.getRecipient());
+                    } else if (cm.getType() == 4) {
+                        for (int i = 0; i < clients.size(); i++) {
+                            if (!clients.get(i).username.equals(username)) {
+                                writeMessage(clients.get(i).username);
+                            }
+                        }
+                    }
                 }
-                close();
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
@@ -146,7 +174,7 @@ final class ChatServer {
                 return false;
             } else {
                 try {
-                    sOutput.writeObject(msg);
+                    sOutput.writeObject(fil.filter(msg));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -155,13 +183,13 @@ final class ChatServer {
         }
 
         private synchronized void broadcast(String msg) {
+            SimpleDateFormat hh = new SimpleDateFormat("HH:mm:ss");
+            Date now = new Date();
             for (int i = 0; i < clients.size(); i++) {
                 //clients.get(i).writeMessage(clients.get(i).cm.getMessage());
-                SimpleDateFormat hh = new SimpleDateFormat("HH:mm:ss");
-                Date now = new Date();
                 clients.get(i).writeMessage(hh.format(now) + " " + msg);
-                System.out.println(hh.format(now) + " " + msg);
             }
+            System.out.println(fil.filter(hh.format(now) + " " + msg));
         }
 
         private void close() {
