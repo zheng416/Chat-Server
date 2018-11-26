@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 final class ChatClient {
@@ -27,7 +28,7 @@ final class ChatClient {
         try {
             socket = new Socket(server, port);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("No server is available.");
         }
 
         // Create your input and output streams
@@ -35,7 +36,7 @@ final class ChatClient {
             sInput = new ObjectInputStream(socket.getInputStream());
             sOutput = new ObjectOutputStream(socket.getOutputStream());
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Error!");
         }
 
         // This thread will listen from the server for incoming messages
@@ -79,56 +80,65 @@ final class ChatClient {
      */
     public static void main(String[] args) {
         // Get proper arguments and override defaults
-        ChatClient client;
-        boolean flag = true;
-        // Create your client and start it
+        try {
+            ChatClient client;
+            boolean flag = true;
+            // Create your client and start it
+            ArrayList<String> names = new ArrayList<>();
 
-        if (args.length == 3) {
-            client = new ChatClient(args[2], Integer.parseInt(args[1]), args[0]);
-        } else if (args.length == 2) {
-            client = new ChatClient("localhost", Integer.parseInt(args[1]), args[0]);
-        } else if (args.length == 1) {
-            client = new ChatClient("localhost", 1500, args[0]);
-        } else {
-            client = new ChatClient("localhost", 1500, "Anonymous");
-        }
-        client.start();
+            if (args.length == 3) {
+                client = new ChatClient(args[2], Integer.parseInt(args[1]), args[0]);
+                names.add(args[0]);
+            } else if (args.length == 2) {
+                client = new ChatClient("localhost", Integer.parseInt(args[1]), args[0]);
+                names.add(args[0]);
+            } else if (args.length == 1) {
+                client = new ChatClient("localhost", 1500, args[0]);
+                names.add(args[0]);
+            } else {
+                client = new ChatClient("localhost", 1500, "Anonymous");
+                names.add("Anonymous");
+            }
+            client.start();
 
-        System.out.println("Connection accepted " + client.socket.getInetAddress().getHostName() + "/" +
-                client.socket.getInetAddress().getHostAddress() + ":" + client.socket.getPort());
+            System.out.println("Connection accepted " + client.socket.getInetAddress().getHostName() + "/" +
+                    client.socket.getInetAddress().getHostAddress() + ":" + client.socket.getPort());
 
             Scanner scan = new Scanner(System.in);
-        while (flag) {
-            String text = scan.nextLine();
+            while (flag) {
+                String text = scan.nextLine();
 
-            if (text.equals("/list")) {
-                client.sendMessage(new ChatMessage(4, "/list"));
-            } else if (text.toLowerCase().equals("/logout")) {
-                flag = false;
-                try {
-                    client.sendMessage(new ChatMessage(1, client.username));
-                    client.sInput.close();
-                    client.sOutput.close();
-                    client.socket.close();
-                    //System.out.println("Server has closed the connection");
-                } catch (Exception e) {
-                    System.out.println("Server has closed the connection");
-                }
-
-            } else if (text.length() > 3 && text.substring(0,4).equals("/msg")) {
-                String[] wordsArr = text.split(" ");
-                String mess = "";
-
-                for (int i = 2; i < wordsArr.length ; i++) {
-                    mess += wordsArr[i];
-                    if (i < wordsArr.length - 1) {
-                        mess += " ";
+                if (text.equals("/list")) {
+                    client.sendMessage(new ChatMessage(4, "/list"));
+                } else if (text.toLowerCase().equals("/logout")) {
+                    flag = false;
+                    try {
+                        client.sendMessage(new ChatMessage(1, client.username));
+                        client.sInput.close();
+                        client.sOutput.close();
+                        client.socket.close();
+                        //System.out.println("Server has closed the connection");
+                    } catch (Exception e) {
+                        System.out.println("Server has closed the connection");
                     }
+
+                } else if (text.length() > 3 && text.substring(0, 4).equals("/msg")) {
+                    String[] wordsArr = text.split(" ");
+                    String mess = "";
+
+                    for (int i = 2; i < wordsArr.length; i++) {
+                        mess += wordsArr[i];
+                        if (i < wordsArr.length - 1) {
+                            mess += " ";
+                        }
+                    }
+                    client.sendMessage(new ChatMessage(2, mess + '\n', wordsArr[1]));
+                } else {
+                    client.sendMessage(new ChatMessage(0, text + '\n'));
                 }
-                client.sendMessage(new ChatMessage(2, mess + '\n', wordsArr[1]));
-            }  else {
-                client.sendMessage(new ChatMessage(0, text + '\n'));
             }
+        } catch (Exception e) {
+            System.out.println("Please start a server or connect to a different one.");
         }
 
         // Send an empty message to the server
