@@ -133,6 +133,10 @@ final class ChatServer {
             }
         }
 
+        public int getId() {
+            return this.id;
+        }
+
         /*
          * This is what the client thread actually runs.
          */
@@ -149,16 +153,18 @@ final class ChatServer {
                     cm = (ChatMessage) sInput.readObject();
                     if (cm.getType() == 1) {
                         close();
+                        clients.remove(id);
+                        flag = false;
                     } else if (cm.getType() == 0) {
                         broadcast(username + ": " + cm.getMessage());
                     } else if (cm.getType() == 2) {
-                        System.out.println(hh.format(now) + " " + username + " -> " + cm.getRecipient() + ": " + censored);
-                        writeMessage(sdf.format(date) + " " + username + " -> " + cm.getRecipient() + ": " + censored);
-                        directMessage(sdf.format(date) + " " + username + " -> " + cm.getRecipient() +
-                                              ": " + censored, cm.getRecipient());
+                        directMessage(hh.format(now) + " " + username + " -> " + cm.getRecipient() +
+                                              ": " + cm.getMessage(), cm.getRecipient());
+                        System.out.println(hh.format(now) + " " + username + " -> " + cm.getRecipient() + ": " + cm.getMessage());
+                        writeMessage(hh.format(now) + " " + username + " -> " + cm.getRecipient() + ": " + cm.getMessage());
                     } else if (cm.getType() == 4) {
                         for (int i = 0; i < clients.size(); i++) {
-                            if (!clients.get(i).username.equals(username)) {
+                            if (clients.get(i).id != id) {
                                 writeMessage(clients.get(i).username);
                             }
                         }
@@ -166,6 +172,19 @@ final class ChatServer {
                 }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
+            }
+        }
+
+        private synchronized void directMessage(String message, String username)  {
+            
+            for (int i = 0; i < clients.size(); i++) {
+                if (clients.get(i).username.equals(username)) {
+                    try {
+                        clients.get(i).sOutput.writeObject(message);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         }
 
@@ -193,10 +212,17 @@ final class ChatServer {
         }
 
         private void close() {
-            try {
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+            for (int i = 0; i < clients.size(); i++) {
+                if (clients.get(i).username.equals(username)) {
+                    try {
+                        clients.get(i).sOutput.close();
+                        clients.get(i).sInput.close();
+                        clients.get(i).socket.close();
+                    } catch (IOException e) {
+                        System.out.println(username + " disconnected with a LOGOUT message.");
+                        i = clients.size();
+                    }
+                }
             }
         }
 
@@ -204,7 +230,18 @@ final class ChatServer {
 
 
     private synchronized void remove(int id) {
-        clients.remove(id);
+        int a = 0;
+        int c = 0;
+        for (int i = 0; i < clients.size(); i++) {
+            if (clients.get(i).getId() == id) {
+                c = 1;
+                a = i;
+            }
+
+        }
+        if (c == 1) {
+            clients.remove(a);
+        }
     }
 
 
