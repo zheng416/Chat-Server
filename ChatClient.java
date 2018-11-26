@@ -106,39 +106,43 @@ final class ChatClient {
 
             Scanner scan = new Scanner(System.in);
             while (flag) {
-                String text = scan.nextLine();
+                try {
+                    String text = scan.nextLine();
 
-                if (text.equals("/list")) {
-                    client.sendMessage(new ChatMessage(4, "/list"));
-                } else if (text.toLowerCase().equals("/logout")) {
-                    flag = false;
-                    try {
-                        client.sendMessage(new ChatMessage(1, client.username));
-                        client.sInput.close();
-                        client.sOutput.close();
-                        client.socket.close();
-                        //System.out.println("Server has closed the connection");
-                    } catch (Exception e) {
-                        System.out.println("Server has closed the connection");
-                    }
-
-                } else if (text.length() > 3 && text.substring(0, 4).equals("/msg")) {
-                    String[] wordsArr = text.split(" ");
-                    String mess = "";
-
-                    for (int i = 2; i < wordsArr.length; i++) {
-                        mess += wordsArr[i];
-                        if (i < wordsArr.length - 1) {
-                            mess += " ";
+                    if (text.equals("/list")) {
+                        client.sendMessage(new ChatMessage(4, "/list"));
+                    } else if (text.toLowerCase().equals("/logout")) {
+                        flag = false;
+                        try {
+                            client.sendMessage(new ChatMessage(1, client.username));
+                            client.sInput.close();
+                            client.sOutput.close();
+                            client.socket.close();
+                            //System.out.println("Server has closed the connection");
+                        } catch (Exception e) {
+                            System.out.println("Server has closed the connection");
                         }
+
+                    } else if (text.length() > 3 && text.substring(0, 4).equals("/msg")) {
+                        String[] wordsArr = text.split(" ");
+                        String mess = "";
+
+                        for (int i = 2; i < wordsArr.length; i++) {
+                            mess += wordsArr[i];
+                            if (i < wordsArr.length - 1) {
+                                mess += " ";
+                            }
+                        }
+                        client.sendMessage(new ChatMessage(2, mess + '\n', wordsArr[1]));
+                    } else {
+                        client.sendMessage(new ChatMessage(0, text + '\n'));
                     }
-                    client.sendMessage(new ChatMessage(2, mess + '\n', wordsArr[1]));
-                } else {
-                    client.sendMessage(new ChatMessage(0, text + '\n'));
+                } catch (Exception e) {
+                    System.out.println("Incorrect direct message format.");
                 }
             }
         } catch (Exception e) {
-            System.out.println("Please start a server or connect to a different one.");
+            System.out.println("Error!");
         }
 
         // Send an empty message to the server
