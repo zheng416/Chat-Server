@@ -154,7 +154,7 @@ final class ChatServer {
                         System.out.println(username + " disconnected with a LOGOUT message.");
                     }
                     for (int i = 0; i < clients.size() ; i++) {
-                        if (clients.get(i).username.equals(username)) {
+                        if (clients.get(i).id == id) {
                             remove(clients.get(i).id);
                         }
                     }
@@ -178,15 +178,19 @@ final class ChatServer {
                     writeMessage(sdf.format(date) + " " + username + ": " + censored);
                     broadcast(sdf.format(date) + " " + username + ": " + censored);
                 } else if (cm.getType() == 2) {  //direct message
-                    System.out.print(sdf.format(date) + " " + username + " -> " + cm.getRecipient() + ": " + censored);
+                    if (username.equals(cm.getRecipient())) {
+                        writeMessage(sdf.format(date) + " Error! You cannot direct message yourself.");
+                    } else {
+                        System.out.print(sdf.format(date) + " " + username + " -> " + cm.getRecipient() + ": " + censored);
 //                    try {
 //                        sOutput.writeObject(sdf.format(date) + " " + username + " -> " + cm.getRecipient() + ": " + censored);
 //                    } catch (IOException e) {
 //                        e.printStackTrace();
 //                    }
-                    writeMessage(sdf.format(date) + " " + username + " -> " + cm.getRecipient() + ": " + censored);
-                    directMessage(sdf.format(date) + " " + username + " -> " + cm.getRecipient() +
-                            ": " + censored, cm.getRecipient());
+                        writeMessage(sdf.format(date) + " " + username + " -> " + cm.getRecipient() + ": " + censored);
+                        directMessage(sdf.format(date) + " " + username + " -> " + cm.getRecipient() +
+                                ": " + censored, cm.getRecipient());
+                    }
                 } else if (cm.getType() == 1) { //logout message
                     try {
                         close();
@@ -195,14 +199,14 @@ final class ChatServer {
                         System.out.println(username + " disconnected with a LOGOUT message.");
                     }
                     for (int i = 0; i < clients.size() ; i++) {
-                        if (clients.get(i).username.equals(username)) {
+                        if (clients.get(i).id == id) {
                             remove(clients.get(i).id);
                         }
                     }
                     flag = false;
                 } else if (cm.getType() == 4) { //list
                     for (int i = 0; i < clients.size() ; i++) {
-                        if (!clients.get(i).username.equals(username)) {
+                        if (clients.get(i).id != id) {
                             writeMessage(clients.get(i).username + "\n");
                         }
                     }
